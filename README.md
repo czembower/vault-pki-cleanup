@@ -35,13 +35,16 @@ pip install -r requirements.txt
 
 ## Modes
 
+```
 orphan-keys	        Deletes keys with no associated issuer (default)
 non-default-keys	Deletes all issuers and keys except the current default
 expired-certs	    Deletes expired certificates (via raw storage interface)
 all-certs	        Deletes all certificates (via raw storage interface)
+```
 
 ## Options
 
+```
 --vault-addr	    Vault server URL
 --vault-token	    Token with sufficient privileges
 --mount	            Path to the PKI engine (e.g., pki, pki_int)
@@ -51,6 +54,7 @@ all-certs	        Deletes all certificates (via raw storage interface)
 --insecure	        Disable TLS verification (use with caution!)
 --dry-run	        Preview changes without making modifications
 --verbose	        Enable debug logging
+```
 
 ## Vault Policy Requirements
 
