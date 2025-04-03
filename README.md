@@ -12,8 +12,8 @@ A command-line tool to clean up orphaned keys, non-default issuers, and expired 
   - Expired certificates
   - All certificates (if needed)
 - Supports dry-run mode to preview changes
-- Smart leader resolution with raw interface verification (needed for certificate deletion)
-- Self-confidence fallback if Vault’s advertised leader is unreachable
+- Leader resolution with raw interface verification (needed for certificate deletion)
+- Self-confidence fallback if Vault’s advertised leader is unreachable directly
 
 ---
 
