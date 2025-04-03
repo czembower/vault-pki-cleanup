@@ -92,6 +92,6 @@ path "sys/raw/*" {
 ### Warnings
 
 - Always test with --dry-run before live deletion
-- Certificate deletion uses raw storage — use with extreme caution
+- Certificate deletion uses raw storage interface (`sys/raw`) — use with extreme caution
 - Assumes only one "default" issuer and key should be retained (when run in `non-default` mode)
 - Avoid running simultaneously on multiple Vault nodes
