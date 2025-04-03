@@ -20,7 +20,7 @@ A command-line tool to clean up orphaned keys, non-default issuers, and expired 
 ## Requirements
 
 - Python 3.8+
-- Vault PKI secrets engine (v1.9+ recommended)
+- Vault cluster with PKI secrets engine
 - Permissions:
   - PKI read/delete access
   - Optional: `sys/raw` access for certificate deletion
