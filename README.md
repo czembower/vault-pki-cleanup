@@ -33,6 +33,18 @@ A command-line tool to clean up orphaned keys, non-default issuers, and expired 
 pip install -r requirements.txt
 ```
 
+## Example Usage
+
+```shell
+python3 cli.py \
+  --vault-addr=https://localhost:8200 \
+  --vault-namespace=myNamespace \
+  --vault-token=$VAULT_TOKEN \
+  --mount=pki_int \
+  --pause-duration=.25 \
+  --mode=expired-certs
+```
+
 ## Modes
 
 ```
