@@ -45,15 +45,15 @@ all-certs         Deletes all certificates (via raw storage interface)
 ## Options
 
 ```
---vault-addr	    Vault server URL
---vault-token	    Token with sufficient privileges
---mount	          Path to the PKI engine (e.g., pki, pki_int)
---vault-namespace	Optional Vault namespace for Enterprise
---mode	          Operation mode (see table above)
---pause-duration	Optional sleep in seconds between deletions
---insecure	      Disable TLS verification (use with caution!)
---dry-run	        Preview changes without making modifications
---verbose	        Enable debug logging
+--vault-addr      Vault server URL
+--vault-token     Token with sufficient privileges
+--mount           Path to the PKI engine (e.g., pki, pki_int)
+--vault-namespace Optional Vault namespace for Enterprise
+--mode            Operation mode (see table above)
+--pause-duration  Optional sleep in seconds between deletions
+--insecure        Disable TLS verification (use with caution!)
+--dry-run         Preview changes without making modifications
+--verbose         Enable debug logging
 ```
 
 ## Vault Policy Requirements
