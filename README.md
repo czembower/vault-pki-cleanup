@@ -86,8 +86,6 @@ path "sys/raw/*" {
 
 - Uses the hvac API client for most Vault operations
 - Uses direct HTTP requests for low-level sys/raw access
-- Uses tqdm for smooth progress display
-- Supports namespace headers and TLS verification toggling
 
 ### Warnings
 
