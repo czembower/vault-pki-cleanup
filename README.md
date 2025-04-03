@@ -36,10 +36,10 @@ pip install -r requirements.txt
 ## Modes
 
 ```
-orphan-keys	      Deletes keys with no associated issuer (default)
-non-default-keys	Deletes all issuers and keys except the current default
-expired-certs	    Deletes expired certificates (via raw storage interface)
-all-certs	        Deletes all certificates (via raw storage interface)
+orphan-keys       Deletes keys with no associated issuer (default)
+non-default-keys  Deletes all issuers and keys except the current default
+expired-certs     Deletes expired certificates (via raw storage interface)
+all-certs         Deletes all certificates (via raw storage interface)
 ```
 
 ## Options
