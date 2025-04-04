@@ -259,6 +259,8 @@ def resolve_addr(vault_addr: str, vault_token: str, insecure: bool):
             if resp.status_code == 200:
                 logging.info(f"Raw interface available")
                 return vault_addr, True
+            
+    return vault_addr, False
 
 def main():
     parser = argparse.ArgumentParser(description="Clean up orphaned PKI keys, non-default issuers, and expired certificates in Vault. Certificate deletion requires Vault's raw storage interface to be enabled.")
