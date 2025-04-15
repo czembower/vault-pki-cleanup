@@ -35,10 +35,13 @@ def get_default_issuer_and_key(client: hvac.Client, mount: str):
     logging.debug("Fetching default issuer ID...")
     try:
         resp = read_issuer(client=client, mount=mount, issuer_id="default")
-        default_issuer_id = resp['issuer_id']
-        default_key_id = resp['key_id']
-        logging.info(f"Default issuer ID/Key: {default_issuer_id}/{default_key_id}")
-        return default_issuer_id, default_key_id
+        if resp is not None:
+            default_issuer_id = resp['issuer_id']
+            default_key_id = resp['key_id']
+            logging.info(f"Default issuer ID/Key: {default_issuer_id}/{default_key_id}")
+            return default_issuer_id, default_key_id
+        else:
+            return None, None
     except Exception as e:
         logging.error(f"Error fetching default issuer/key: {e}")
         sys.exit(1)
@@ -48,16 +51,23 @@ def list_issuers(client: hvac.Client, mount: str):
         resp = client.secrets.pki.list_issuers(mount_point=mount)
         return resp.get('data', {}).get('key_info', {}).keys()
     except Exception as e:
-        logging.error(f"Could not list issuers: {e}")
-        sys.exit(1)
+        if "None, on list" in str(e):
+            logging.warning("No issuers found.")
+            return []
+        else:
+            logging.error(f"Could not list issuers: {e}")
+            sys.exit(1)
     
 def read_issuer(client: hvac.Client, mount: str, issuer_id: str):
     try:
         resp = client.secrets.pki.read_issuer(issuer_id, mount_point=mount)
         return resp.get('data', {})
     except Exception as e:
-        logging.error(f"Could not read issuer: {e}")
-        sys.exit(1)
+        if "no default issuer currently configured" in str(e):
+            return None
+        else:
+            logging.error(f"Could not read issuer: {e}")
+            sys.exit(1)
 
 def list_keys(client: hvac.Client, mount: str):
     try:
@@ -74,6 +84,7 @@ def delete_issuer(client: hvac.Client, mount: str, issuer_id: str):
         logging.info(f"Deleted issuer: {issuer_id}")
     except Exception as e:
         logging.error(f"Failed to delete issuer {issuer_id}: {e}")
+        sys.exit(1)
 
 def delete_key(client: hvac.Client, mount: str, key_id: str):
     try:
@@ -81,9 +92,13 @@ def delete_key(client: hvac.Client, mount: str, key_id: str):
         client.adapter.request("DELETE", path)
     except Exception as e:
         logging.error(f"Failed to delete key {key_id}: {e}")
+        sys.exit(1)
 
 def cleanup_non_default_issuers_and_keys(client: hvac.Client, mount: str, dry_run: bool, pause_duration: float):
     default_issuer_id, default_key_id = get_default_issuer_and_key(client, mount)
+    if default_issuer_id is None or default_key_id is None:
+        logging.warning("No default issuer/key configured")
+        input("Press any key to continue deleting ALL ISSUERS AND KEYS....(cntrl-c to cancel)")
     issuer_ids = list_issuers(client, mount)
     key_ids = list_keys(client, mount)
 
