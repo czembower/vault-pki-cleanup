@@ -49,7 +49,7 @@ def list_issuers(client: hvac.Client, mount: str):
         return resp.get('data', {}).get('key_info', {}).keys()
     except Exception as e:
         logging.error(f"Could not list issuers: {e}")
-        return []
+        sys.exit(1)
     
 def read_issuer(client: hvac.Client, mount: str, issuer_id: str):
     try:
@@ -57,7 +57,7 @@ def read_issuer(client: hvac.Client, mount: str, issuer_id: str):
         return resp.get('data', {})
     except Exception as e:
         logging.error(f"Could not read issuer: {e}")
-        return []
+        sys.exit(1)
 
 def list_keys(client: hvac.Client, mount: str):
     try:
@@ -66,7 +66,7 @@ def list_keys(client: hvac.Client, mount: str):
         return resp.get("data", {}).get("keys", [])
     except Exception as e:
         logging.error(f"Could not list keys: {e}")
-        return []
+        sys.exit(1)
 
 def delete_issuer(client: hvac.Client, mount: str, issuer_id: str):
     try:
@@ -144,7 +144,7 @@ def list_certificates(client: hvac.Client, mount: str):
         return resp.get("data", {}).get("keys", [])
     except Exception as e:
         logging.error(f"Could not list certificates: {e}")
-        return []
+        sys.exit(1)
 
 def read_certificate(client: hvac.Client, mount: str, serial: str):
     try:
@@ -177,6 +177,7 @@ def get_mount_uuid(client: hvac.Client, mount: str):
         return mount_uuid
     except Exception as e:
         logging.error(f"Failed to read mount UUID for {mount}: {e}")
+        sys.exit(1)
 
 def delete_cert_with_raw(raw_client: hvac.Client, mount_uuid: str, cert: str, pause_duration: float):
     try:
@@ -187,6 +188,7 @@ def delete_cert_with_raw(raw_client: hvac.Client, mount_uuid: str, cert: str, pa
         time.sleep(pause_duration)
     except Exception as e:
         logging.error(f"Failed to delete certificate from raw interface (is it enabled?): {e}")
+        sys.exit(1)
 
 def delete_certificates(client: hvac.Client, raw_client: hvac.Client, mount: str, dry_run: bool, pause_duration: float, expired_only: bool):
     valid_certs, expired_certs = parse_certificates(client, mount)
