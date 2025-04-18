@@ -194,6 +194,78 @@ def get_mount_uuid(client: hvac.Client, mount: str):
         logging.error(f"Failed to read mount UUID for {mount}: {e}")
         sys.exit(1)
 
+def list_leases(client: hvac.Client, prefix: str):
+    try:
+        resp = client.sys.list_leases(prefix=prefix)
+        leases = resp.get("data", {}).get("keys", [])
+        return leases
+    except Exception as e:
+        logging.error(f"Failed to list leases: {e}")
+        sys.exit(1)
+
+def walk_leases(client: hvac.Client, prefix: str, lease_list: list[str]):
+    logging.info(f"Inspecting leases at {prefix}")
+    try:
+        resp = list_leases(client, prefix)
+        
+        for item in resp:
+            if item.endswith("/"):
+                logging.debug(f"Prefix found at {prefix}: {item}")
+                walk_leases(client, prefix+"/"+item[:-1], lease_list)
+            else:
+                logging.debug(f"Lease at {prefix}: {item}")
+                lease_list.append(prefix+item)
+        return lease_list
+    except Exception as e:
+        logging.error(f"Failed to walk leases: {e}")
+        sys.exit(1)
+
+def revoke_lease(client: hvac.Client, lease: str, force: bool = False):
+    if force:
+        try:
+            logging.info(f"Force revoking lease {lease}")
+            path = f"/v1/sys/leases/revoke-force/{lease}"
+            resp = client.adapter.request("POST", path)
+            return
+        except Exception as e:
+            logging.error(f"Failed to force-revoke lease {lease}: {e}")
+            sys.exit(1)
+    else:
+        try:
+            logging.info(f"Revoking lease {lease}")
+            resp = client.sys.revoke_lease(lease)
+        except Exception as e:
+            logging.error(f"Failed to delete lease {lease}: {e}")
+            sys.exit(1)
+
+def tidy_leases(client: hvac.Client, dry_run: bool):
+    if dry_run:
+        logging.info(f"{get_prefix(dry_run)}Would tidy leases")
+        return
+    else:
+        try:
+            logging.info("Tidying leases")
+            path = f"/v1/sys/leases/tidy"
+            resp = client.adapter.request("POST", path)
+            return
+        except Exception as e:
+            logging.error(f"Failed to tidy leases: {e}")
+            sys.exit(1)
+
+def cleanup_leases(client: hvac.Client, mount: str, dry_run: bool, pause_duration: float):
+    leases = walk_leases(client, mount, [])
+    logging.info(f"Found {len(leases)} leases to delete")
+
+    for lease in leases:
+        if dry_run:
+            logging.info(f"{get_prefix(dry_run)}Would revoke lease: {lease}")
+        else:
+            revoke_lease(client, lease, force=False)
+            if pause_duration > 0:
+                time.sleep(pause_duration)
+
+    tidy_leases(client, dry_run)
+
 def delete_cert_with_raw(raw_client: hvac.Client, mount_uuid: str, cert: str, pause_duration: float):
     try:
         cert_path = cert.replace(":", "-")
@@ -244,12 +316,17 @@ def get_prefix(dry_run: bool):
     
 def self_confidence(vault_addr: str, insecure: bool):
     logging.info("Running self-confidence test...")
-    iter = 20
+    iter = 1
     for i in tqdm(range(iter), desc="Testing", unit="iter", dynamic_ncols=True):
-        resp = requests.get(url=vault_addr+"/v1/sys/leader", verify=not insecure)
-        if resp.json()['is_self'] == False:
+        try:
+            resp = requests.get(url=vault_addr+"/v1/sys/leader", verify=not insecure)
+            if resp.json()['is_self'] == False:
+                logging.error("Self-confidence test failed: not self")
+                return False
+            time.sleep(.25)
+        except Exception as e:
+            logging.error(f"Self-confidence test failed: {e}")
             return False
-        time.sleep(.25)
     return True
 
 def resolve_addr(vault_addr: str, vault_token: str, insecure: bool):
@@ -279,13 +356,50 @@ def resolve_addr(vault_addr: str, vault_token: str, insecure: bool):
             
     return vault_addr, False
 
+def list_db_path(client: hvac.Client, path: str, dry_run: bool, pause_duration: float):
+    try:
+        resp = client.adapter.request("GET", path+"?list=true")
+        data = resp.get("data", {}).get("keys", [])
+        for item in data:
+            if item.endswith("/"):
+                list_db_path(client, path+"/"+item[:-1], dry_run, pause_duration)
+            else:
+                delete_db_object(client, path+"/"+item, dry_run, pause_duration)
+    except Exception as e:
+        logging.error(f"Failed to list database path: {e}")
+        sys.exit(1)
+
+def delete_db_object(client: hvac.Client, path: str, dry_run: bool, pause_duration: float):
+    if dry_run:
+        logging.info(f"{get_prefix(dry_run)}Would delete database object at {path}")
+        return
+    else:
+        logging.info(f"Deleting database object at {path}")
+        try:
+            logging.info(f"Deleting database object at {path}")
+            resp = client.adapter.request("DELETE", path)
+            logging.info(resp)
+            time.sleep(pause_duration)
+        except Exception as e:
+            logging.error(f"Failed to delete database path: {e}")
+            sys.exit(1)
+            time.sleep(pause_duration)
+    
+
+def walk_db(client: hvac.Client, raw_client: hvac.Client, mount: str, dry_run: bool, pause_duration: float):
+    logging.info(f"Walking database at {mount}")
+    mount_uuid = get_mount_uuid(client, mount)
+    logging.info(f"Mount UUID: {mount_uuid}")
+    path = f"/v1/sys/raw/logical/{mount_uuid}"
+    list_db_path(raw_client, path, dry_run, pause_duration)
+
 def main():
     parser = argparse.ArgumentParser(description="Clean up orphaned PKI keys, non-default issuers, and expired certificates in Vault. Certificate deletion requires Vault's raw storage interface to be enabled.")
     parser.add_argument("--vault-addr", required=True, help="Vault server address (e.g. https://vault.example.com:8200)")
     parser.add_argument("--vault-token", required=True, help="Vault token with sufficient privileges to list and delete PKI engine issuers and keys, and access to the `sys/raw` interface if deleting certificates.")
     parser.add_argument("--mount", required=True, default="pki", help="PKI secrets engine mount path (default: 'pki')")
     parser.add_argument("--vault-namespace", default=None, help="Vault namespace (optional)")
-    parser.add_argument("--mode", choices=["orphan-keys", "non-default-keys", "expired-certs", "all-certs"], default="orphan-keys", help="Sets which resources should be targeted for deletion. Defaults to `orphan-keys`")
+    parser.add_argument("--mode", choices=["orphan-keys", "non-default-keys", "expired-certs", "all-certs", "leases", "walk-db"], default="orphan-keys", help="Sets which resources should be targeted for deletion. Defaults to `orphan-keys`")
     parser.add_argument("--pause-duration", type=float, default=0, help="Pause duration in seconds between deletions (default: 0)")
     parser.add_argument("--insecure", action="store_true", help="Disable TLS certificate verification (insecure)")
     parser.add_argument("--dry-run", action="store_true", help="Preview actions without deleting anything")
@@ -316,6 +430,14 @@ def main():
             sys.exit(1)
         raw_client = get_vault_client(vault_address, args.vault_token, verify=not args.insecure)
         delete_certificates(client, raw_client, args.mount, args.dry_run, args.pause_duration, expired_only=False)
+    elif args.mode == "leases":
+        cleanup_leases(client, args.mount, args.dry_run, args.pause_duration)
+    elif args.mode == "walk-db":
+        if not raw_interface:
+            logging.error("Certificate operations prohibited without raw interface access")
+            sys.exit(1)
+        raw_client = get_vault_client(vault_address, args.vault_token, verify=not args.insecure)
+        walk_db(client, raw_client, args.mount, dry_run=args.dry_run, pause_duration=args.pause_duration)
     else:
         logging.error("unknown mode -- see help menu")
         sys.exit(1)

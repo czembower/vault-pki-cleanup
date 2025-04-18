@@ -52,6 +52,8 @@ orphan-keys       Deletes keys with no associated issuer (default)
 non-default-keys  Deletes all issuers and keys except the current default
 expired-certs     Deletes expired certificates (via raw storage interface)
 all-certs         Deletes all certificates (via raw storage interface)
+leases            Deletes all leases associated with the target mount
+walk-db           Deletes all resources under the target mount - USE WITH EXTREME CAUTION
 ```
 
 ## Options
@@ -78,7 +80,7 @@ path "pki_mount/*" {
 
 ```
 path "sys/raw/*" {
-  capabilities = ["read", "list", "delete"]
+  capabilities = ["read", "list", "delete", "sudo"]
 }
 ```
 
