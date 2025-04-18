@@ -79,6 +79,12 @@ path "pki_mount/*" {
 ```
 
 ```
+path "sys/leases/*" {
+  capabilities = ["update", "read", "list", "delete"]
+}
+```
+
+```
 path "sys/raw/*" {
   capabilities = ["read", "list", "delete", "sudo"]
 }
