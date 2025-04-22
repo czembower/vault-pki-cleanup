@@ -72,19 +72,47 @@ walk-db           Deletes all resources under the target mount - USE WITH EXTREM
 
 ## Vault Policy Requirements
 
+The policy used by this utility must grant access to `sys/raw` in the root
+namespace, and therefore should be defined in the root namespace. The below
+example policy grants access to the PKI engine `pki_int` in the root namespace.
+If the target engine resides within a child namespace, authentication should
+still occur in the root namespace, but the policy will need to provide access
+to the child namespace endpoints at the paths below, prepended by the namespace
+name or a "+". 
+
+Root namespace policy example:
 ```
-path "pki_mount/*" {
+path "sys/mounts/*" {
+  capabilities = ["read"]
+}
+
+path "pki_int/*" {
   capabilities = ["read", "list", "delete"]
 }
-```
 
-```
 path "sys/leases/*" {
   capabilities = ["update", "read", "list", "delete"]
 }
+
+path "sys/raw/*" {
+  capabilities = ["read", "list", "delete", "sudo"]
+}
 ```
 
+Child namespace policy example:
 ```
+path "+/sys/mounts/*" {
+  capabilities = ["read"]
+}
+
+path "+/pki_int/*" {
+  capabilities = ["read", "list", "delete"]
+}
+
+path "+/sys/leases/*" {
+  capabilities = ["update", "read", "list", "delete"]
+}
+
 path "sys/raw/*" {
   capabilities = ["read", "list", "delete", "sudo"]
 }

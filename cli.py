@@ -350,6 +350,7 @@ def resolve_addr(vault_addr: str, vault_token: str, insecure: bool):
         if self_confidence(vault_addr, insecure):
             logging.warning("Published leader address not reachable, but self-confidence test passed - proceeding")
             resp = requests.get(url=vault_addr+"/v1/sys/raw/logical?list=true", verify=not insecure, headers=headers)
+            logging.info(resp)
             if resp.status_code == 200:
                 logging.info(f"Raw interface available")
                 return vault_addr, True
@@ -384,7 +385,6 @@ def delete_db_object(client: hvac.Client, path: str, dry_run: bool, pause_durati
             logging.error(f"Failed to delete database path: {e}")
             sys.exit(1)
             time.sleep(pause_duration)
-    
 
 def walk_db(client: hvac.Client, raw_client: hvac.Client, mount: str, dry_run: bool, pause_duration: float):
     logging.info(f"Walking database at {mount}")
@@ -434,7 +434,7 @@ def main():
         cleanup_leases(client, args.mount, args.dry_run, args.pause_duration)
     elif args.mode == "walk-db":
         if not raw_interface:
-            logging.error("Certificate operations prohibited without raw interface access")
+            logging.error("Database operations prohibited without raw interface access")
             sys.exit(1)
         raw_client = get_vault_client(vault_address, args.vault_token, verify=not args.insecure)
         walk_db(client, raw_client, args.mount, dry_run=args.dry_run, pause_duration=args.pause_duration)
